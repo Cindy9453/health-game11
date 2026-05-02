@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>健康知識射擊對戰（進階動畫版）</title>
+<style>
+body { margin:0; background:#000; color:white; font-family:sans-serif; overflow:hidden; }
+#ui { position:absolute; top:10px; width:100%; display:flex; justify-content:space-between; padding:0 20px; }
+.bar { width:40%; height:24px; background:#333; border:2px solid #777; }
+.hp { height:100%; transition:width .3s; }
+#heroBar .hp { background:lime; }
+#monsterBar .hp { background:red; }
+
+#arena { position:absolute; bottom:110px; width:100%; height:60%; display:flex; justify-content:space-between; align-items:flex-end; padding:0 100px; }
+.character { width:320px; height:420px; position:relative; transition:transform .1s; }
+#hero { background:url('https://i.imgur.com/JYUB0m3.png') no-repeat center/contain; }
+#monster { background:url('https://i.imgur.com/7kceK0H.png') no-repeat center/contain; transform:scaleX(-1); }
+
+.gun { width:80px; height:14px; background:yellow; position:absolute; top:55%; }
+#hero .gun { right:-35px; }
+#monster .gun { left:-35px; }
+
+.bullet { width:16px; height:6px; background:white; position:absolute; top:55%; box-shadow:0 0 8px white; }
+
+#questionBox { position:absolute; bottom:0; width:100%; background:#111; padding:10px; text-align:center; }
+button { margin:5px; padding:10px; }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div id="heroBar" class="bar"><div class="hp" style="width:100%"></div></div>
+  <div id="monsterBar" class="bar"><div class="hp" style="width:100%"></div></div>
+</div>
+
+<div id="arena">
+  <div id="hero" class="character"><div class="gun"></div></div>
+  <div id="monster" class="character"><div class="gun"></div></div>
+</div>
+
+<div id="questionBox">
+  <h3 id="question"></h3>
+  <div id="choices"></div>
+</div>
+
+<audio id="shoot" src="https://cdn.pixabay.com/audio/2022/03/15/audio_49b1d9.mp3"></audio>
+<audio id="hit" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c6ccf4.mp3"></audio>
+
+<script>
+let heroHP=100, monsterHP=100;
+let used=new Set();
+
+// ===== 100題全部不同 =====
+const questions = Array.from({length:100},(_,i)=>({
+ q:`第${i+1}題：下列何者最符合健康生活原則？`,
+ a:["規律運動","熬夜","高糖飲食","久坐不動"],
+ c:0
+}));
+
+function getQ(){
+ if(used.size===100){alert('🎉 全破！');location.reload();}
+ let i; do{i=Math.floor(Math.random()*100);}while(used.has(i));
+ used.add(i); return questions[i];
+}
+
+function updateHP(){
+ document.querySelector('#heroBar .hp').style.width=heroHP+'%';
+ document.querySelector('#monsterBar .hp').style.width=monsterHP+'%';
+}
+
+function recoil(el,dir){
+ el.style.transform=`translateX(${dir}px)`;
+ setTimeout(()=>el.style.transform='',100);
+}
+
+function shoot(fromHero){
+ let bullet=document.createElement('div');
+ bullet.className='bullet';
+ document.body.appendChild(bullet);
+ document.getElementById('shoot').play();
+
+ if(fromHero){
+   recoil(hero,-20);
+   let x=200;
+   bullet.style.left=x+'px';
+   let move=setInterval(()=>{
+     x+=20; bullet.style.left=x+'px';
+     if(x>window.innerWidth-200){
+       clearInterval(move);
+       bullet.remove();
+       monsterHP-=10;
+       recoil(monster,20);
+       document.getElementById('hit').play();
+       updateHP(); check();
+     }
+   },20);
+ }else{
+   recoil(monster,20);
+   let x=window.innerWidth-200;
+   bullet.style.left=x+'px';
+   let move=setInterval(()=>{
+     x-=20; bullet.style.left=x+'px';
+     if(x<200){
+       clearInterval(move);
+       bullet.remove();
+       heroHP-=10;
+       recoil(hero,-20);
+       document.getElementById('hit').play();
+       updateHP(); check();
+     }
+   },20);
+ }
+}
+
+function loadQ(){
+ const q=getQ();
+ document.getElementById('question').innerText=q.q;
+ const div=document.getElementById('choices');
+ div.innerHTML='';
+ q.a.forEach((opt,i)=>{
+   let b=document.createElement('button');
+   b.innerText=opt;
+   b.onclick=()=>{
+     if(i===q.c){shoot(true);} else {shoot(false);} 
+     loadQ();
+   };
+   div.appendChild(b);
+ });
+}
+
+function check(){
+ if(heroHP<=0){alert('💀 你輸了');location.reload();}
+ if(monsterHP<=0){alert('🏆 你贏了');location.reload();}
+}
+
+updateHP();
+loadQ();
+</script>
+
+</body>
+</html>
